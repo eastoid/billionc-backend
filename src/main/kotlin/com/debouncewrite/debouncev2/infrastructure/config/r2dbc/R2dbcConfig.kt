@@ -1,6 +1,5 @@
 package com.debouncewrite.debouncev2.infrastructure.config.r2dbc
 
-import com.debouncewrite.debouncev2.common.util.CrockfordBase32
 import de.huxhorn.sulky.ulid.ULID
 import io.r2dbc.spi.ConnectionFactory
 import org.springframework.context.annotation.Bean
