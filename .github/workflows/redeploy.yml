@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+
+jobs:
+  redeploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: check runner configuration
+        run: |
+          echo "[#] default root location:"
+          pwd
+          echo "[#] java version before update to 21:"
+          java -version
+          echo "[#] node version:"
+          node -v
+          echo "[#] ubuntu version:"
+          lsb_release -a
+          echo "[#] docker version:"
+          docker -v
+          echo "[#] whoami:"
+          whoami
+          echo "[#] sudo whoami:"
+          sudo whoami
+
+      - name: cd to repo
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          echo "Went to workspace ($GITHUB_WORKSPACE). Files:"
+          ls -lsha
+
+      - name: Install Java 21
+        uses: actions/setup-java@v4.2.2
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Build JAR - bootJar
+        run: |
+          echo "About to build gradlew. Location:"; pwd
+          sudo chmod +x gradlew
+          ./gradlew bootJar
+
+      - name: Log into docker hub
+        uses: docker/login-action@v3.3.0
+        with:
+          username: ${{ vars.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      - name: Build Docker image
+        run: docker build -t ${{ vars.DOCKER_REPO }}:${{ github.run_number }} .
+
+      - name: Push Docker image
+        run: docker push ${{ vars.DOCKER_REPO }}:${{ github.run_number }}
+
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Deploy Docker container
+        run: |
+          ssh -o StrictHostKeyChecking=no -p ${{ secrets.SERVER_SSH_PORT }} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} << EOF
+            echo "[run]$ set -e"; set -e
+            echo "[run]$ sudo docker stop ${{ vars.CONTAINER_NAME }}"; sudo docker stop ${{ vars.CONTAINER_NAME }} || true
+            echo "[run]$ sudo docker rm -f ${{ vars.CONTAINER_NAME }}"; sudo docker rm -f ${{ vars.CONTAINER_NAME }} || true
+            echo "[run]$ sudo docker rmi ${{ vars.DOCKER_REPO }}:${{ github.run_number }}"; sudo docker rmi ${{ vars.DOCKER_REPO }}:${{ github.run_number }} || true
+          
+            echo "[run]$ sudo docker pull ${{ vars.DOCKER_REPO }}:${{ github.run_number }}"; sudo docker pull ${{ vars.DOCKER_REPO }}:${{ github.run_number }}
+            echo "[run]$ sudo docker run -d --name \"${{ vars.CONTAINER_NAME }}\" ... ${{ vars.DOCKER_REPO }}:${{ github.run_number }}"
+            sudo docker run -d \
+              --name "${{ vars.CONTAINER_NAME }}" \
+              -p 127.0.0.1:8089:8080 \
+              --restart unless-stopped \
+              -e "BILLIONC_DOMAIN=${{ secrets.BILLIONC_DOMAIN }}" \
+              -e "BILLIONC_ADMIN_PASSWORD=${{ secrets.BILLIONC_ADMIN_PASSWORD }}" \
+              -e "BILLIONC_ADMIN_TOTP_SECRET=${{ secrets.BILLIONC_ADMIN_TOTP_SECRET }}" \
+              -e "BILLIONC_LOGGING_LEVEL=ERROR" \
+              -e "BILLIONC_PORT=8080" \
+              -e "BILLIONC_POSTGRES_PASSWORD=${{ secrets.BILLIONC_POSTGRES_PASSWORD }}" \
+              -e "BILLIONC_POSTGRES_SCHEMA=${{ vars.BILLIONC_POSTGRES_SCHEMA }}" \
+              -e "BILLIONC_POSTGRES_URL=${{ vars.BILLIONC_POSTGRES_URL }}" \
+              -e "BILLIONC_POSTGRES_USERNAME=${{ vars.BILLIONC_POSTGRES_USERNAME }}" \
+              -e "BILLIONC_REDIS_ADDRESS=${{ vars.BILLIONC_REDIS_ADDRESS }}" \
+              -e "BILLIONC_REDIS_DATABASE=${{ vars.BILLIONC_REDIS_DATABASE }}" \
+              -e "BILLIONC_REDIS_PASSWORD=${{ secrets.BILLIONC_REDIS_PASSWORD }}" \
+              -e "BILLIONC_REDIS_PORT=${{ vars.BILLIONC_REDIS_PORT }}" \
+              -e "BILLIONC_TEXT_DISPLAYNAME=${{ vars.BILLIONC_TEXT_DISPLAYNAME }}" \
+              -e "BILLIONC_URL_HOMEPAGE=${{ vars.BILLIONC_URL_HOMEPAGE }}" \
+              ${{ vars.DOCKER_REPO }}:${{ github.run_number }}
+          
+            echo "[run]$ sudo docker network connect debounce-network ${{ vars.CONTAINER_NAME }}"; sudo docker network connect debounce-network ${{ vars.CONTAINER_NAME }} || true
+          EOF
