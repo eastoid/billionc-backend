@@ -8,7 +8,7 @@ plugins {
 	kotlin("plugin.serialization") version "2.0.20"
 }
 
-group = "com.debouncewrite"
+group = "billionc"
 version = "1"
 
 java {
