@@ -1,0 +1,70 @@
+management:
+  endpoint:
+    health:
+      show-details: always
+      enabled: true
+    metrics:
+      enabled: true
+
+  defaults:
+    metrics:
+      export:
+        enabled: true
+
+  endpoints:
+    web:
+      discovery:
+        enabled: true
+      exposure:
+        include: health,metrics
+    enabled-by-default: false
+
+###
+
+server:
+  port: ${BILLIONC_PORT}
+  ssl:
+    enabled: false
+  error:
+    whitelabel:
+      enabled: false
+    include-message: never
+
+spring:
+  main:
+    web-application-type: reactive
+    allow-circular-references: true
+    lazy-initialization: false
+  r2dbc:
+    url: ${BILLIONC_POSTGRES_URL}
+    username: ${BILLIONC_POSTGRES_USERNAME}
+    password: ${BILLIONC_POSTGRES_PASSWORD}
+    properties:
+      schema: ${BILLIONC_POSTGRES_SCHEMA}
+    pool:
+      max-size: 20
+      max-idle-time: 30m
+      initial-size: 10
+  data:
+    redis:
+      host: ${BILLIONC_REDIS_ADDRESS}
+      password: ${BILLIONC_REDIS_PASSWORD}
+      port: ${BILLIONC_REDIS_PORT}
+      database: ${BILLIONC_REDIS_DATABASE}
+  rsocket:
+    server:
+      transport: websocket
+      mapping-path: /v1/rsocket
+      ssl:
+        enabled: false
+      fragment-size: 16384
+
+  autoconfigure:
+    exclude: org.springframework.boot.autoconfigure.security.reactive.ReactiveSecurityAutoConfiguration, org.springframework.boot.autoconfigure.security.rsocket.RSocketSecurityAutoConfiguration
+
+logging:
+  level:
+    org.springframework.web.server: ${BILLIONC_LOGGING_LEVEL}
+    org.springframework.http.server.reactive: ${BILLIONC_LOGGING_LEVEL}
+    io.r2dbc: FATAL
+    org.springframework.messaging: FATAL
