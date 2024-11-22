@@ -54,6 +54,8 @@ class CheckboxService(
         loadClickCount()
         loadCheckedCount()
 
+        synchronizeCheckedCount()
+
         // Loops
         scope.launch {
             loop_persistClickCount()
@@ -70,9 +72,37 @@ class CheckboxService(
         scope.launch {
             loop_sendMetadata()
         }
+
+        scope.launch {
+            loop_sendUserCount()
+        }
     }
 
-    suspend fun loadCheckboxes() {
+    private suspend fun loop_sendUserCount() {
+        var previousCount: Int? = null
+        while(true) {
+            delay(20000)
+            runCatching {
+                val count = rsocketService.connectionCount.get()
+                if (count == previousCount) return@runCatching
+                previousCount = count
+
+                rsocketService.sendToAllConnections(count.toString(), "users")
+            }
+        }
+    }
+
+    private suspend fun synchronizeCheckedCount() {
+        val count = checkedBoxes.get()
+        val actual = bitSet.countOneBits()
+
+        if (count != actual) {
+            checkedBoxes.set(actual)
+            checkboxMetadataService.setCheckedCount(actual)
+        }
+    }
+
+    private suspend fun loadCheckboxes() {
         val dbResult = getLatestBits()
         if (dbResult != null) {
             println("SETTING BITS FROM DATABASE")

@@ -56,6 +56,15 @@ class ConcurrentBitSet(size: Int) {
         }
     }
 
+    fun countOneBits(): Int {
+        var count = 0
+        for (i in 0 until array.length()) {
+            val value = array.get(i)
+            count += java.lang.Long.bitCount(value)
+        }
+        return count
+    }
+
     val bytes
         get(): ByteArray {
             val buffer = ByteBuffer.allocate(array.length() * Long.SIZE_BYTES)

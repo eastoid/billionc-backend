@@ -23,6 +23,7 @@ class RsocketService(private val checkboxSubscriptionService: CheckboxSubscripti
     // Ip, connection count
     private val connectionCounts = ConcurrentHashMap<String, AtomicInteger>()
 
+    val connectionCount = AtomicInteger(0)
 
     fun add(rsocket: RSocketRequester, ip: String) {
         rsocket.rsocket() ?: return
@@ -37,6 +38,7 @@ class RsocketService(private val checkboxSubscriptionService: CheckboxSubscripti
             return
         }
         count.incrementAndGet()
+        connectionCount.incrementAndGet()
 
         connections[rsocket] = ip
         hashCodes[rsocket.hashCode()] = rsocket
@@ -49,6 +51,7 @@ class RsocketService(private val checkboxSubscriptionService: CheckboxSubscripti
                 connectionCounts.compute(ip) { _, count ->
                     count?.apply { decrementAndGet() }?.takeIf { it.get() > 0 }
                 }
+                connectionCount.decrementAndGet()
 
                 checkboxSubscriptionService.unsubscribeAll(rsocket.hashCode())
             }.onFailure {
