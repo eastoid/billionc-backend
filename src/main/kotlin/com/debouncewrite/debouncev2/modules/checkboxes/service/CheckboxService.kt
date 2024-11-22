@@ -28,6 +28,9 @@ class CheckboxService(
     val clickCount = AtomicLong()
     val checkedBoxes = AtomicInteger()
 
+    private var lastPersistedBitHash: Int? = null
+
+
     fun setBox(index: Int, value: Boolean) {
         clickCount.incrementAndGet()
         if (value) {
@@ -46,7 +49,7 @@ class CheckboxService(
     }
 
     @EventListener(ApplicationStartedEvent::class)
-    suspend fun onStart() {
+    private suspend fun onStart() {
         loadCheckboxes()
         loadClickCount()
         loadCheckedCount()
@@ -130,9 +133,13 @@ class CheckboxService(
 
     private suspend fun loop_persistCheckboxBits() {
         while(true) {
-            delay(21600000) // 6 hrs
+            delay(7200000) // 2 hrs
             runCatching {
-                persistData()
+                val hash = bitSet.hashCode()
+                val previousHash = lastPersistedBitHash
+
+                // Prevent persisting bits if they havent changed
+                persistData(hash == previousHash)
             }
         }
     }
@@ -151,13 +158,16 @@ class CheckboxService(
         }
     }
 
-    suspend fun persistData() {
+    suspend fun persistData(preventBitPersistence: Boolean = false) {
         println("Persisting checkboxes.")
-        val checkboxes = Checkboxes(ULIDGenerator.generate(), bitSet.bytes, unixNow())
 
         val clicks = clickCount.get()
         val checkedBoxes = checkedBoxes.get()
-        insertBits(checkboxes)
+
+        if (!preventBitPersistence) {
+            val checkboxes = Checkboxes(ULIDGenerator.generate(), bitSet.bytes, unixNow())
+            insertBits(checkboxes)
+        }
 
         checkboxMetadataService.setClicks(clicks)
         checkboxMetadataService.setCheckedCount(checkedBoxes)

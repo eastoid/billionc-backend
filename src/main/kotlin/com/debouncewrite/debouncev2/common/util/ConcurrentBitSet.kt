@@ -64,4 +64,34 @@ class ConcurrentBitSet(size: Int) {
             }
             return buffer.array()
         }
+
+    override fun hashCode(): Int {
+        var result = 1
+        for (i in 0 until array.length()) {
+            // Use long arithmetic before converting to int to better handle overflow
+            val elementHash = array.get(i).hashCode()
+            result = 31 * result + elementHash
+        }
+        return result
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as ConcurrentBitSet
+
+        // Get length once to avoid possible concurrent modification
+        val length = array.length()
+        if (length != other.array.length()) return false
+
+        for (i in 0 until length) {
+            // Get values once to ensure consistent comparison
+            val thisValue = array.get(i)
+            val otherValue = other.array.get(i)
+            if (thisValue != otherValue) return false
+        }
+        return true
+    }
+
 }
