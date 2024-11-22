@@ -1,16 +1,4 @@
 # [`GO FRONTEND`](https://github.com/eastoid/billionc-frontend).
 
-# One prdlotrillion checkboxes
-
----
----
----
-
--0---
----
-
----
----
-----
-
-eacting cholocate from daspoon
+one billion checkboxes test project
+https://blbecek.com
