@@ -9,9 +9,9 @@ class RsocketRateLimitService {
 
     private val config = listOf(
         RsocketRateLimitConfig("con", 3, 1),
-        RsocketRateLimitConfig("get", 40, 1),
-        RsocketRateLimitConfig("set", 8, 1),
-        RsocketRateLimitConfig("uns", 45, 1),
+        RsocketRateLimitConfig("get", 70, 1),
+        RsocketRateLimitConfig("set", 10, 1),
+        RsocketRateLimitConfig("uns", 75, 1),
     )
 
     private val rateLimiter = RsocketRateLimiter(config)

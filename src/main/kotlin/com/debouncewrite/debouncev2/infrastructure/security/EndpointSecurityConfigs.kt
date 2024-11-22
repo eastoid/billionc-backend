@@ -44,7 +44,7 @@ object EndpointSecurityConfigs {
             userAction = UserAction.NONE,
         ),
         SecurityEndpointConfig(
-            path = "/v1/rsocket/metadata",
+            path = "/v1/checkbox/metadata",
             id = 4,
             refillMs = 1000,
             max = 10,
